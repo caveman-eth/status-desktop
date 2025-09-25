@@ -33,6 +33,7 @@ Rectangle {
     property var selectAllAccounts: function(){}
     property var changeSelectedAccount: function(){}
     property var selectSavedAddresses: function(){}
+    property var selectFollowingAddresses: function(){}
     property var emojiPopup: null
 
     property bool isKeycardEnabled: true
@@ -463,6 +464,31 @@ Rectangle {
                     textFillWidth: true
                     spacing: walletAccountsListView.firstItem.statusListItemTitleArea.anchors.leftMargin
                     onClicked: root.selectSavedAddresses()
+                }
+            }
+
+            StatusListItem {
+                objectName: "followingAddressesListItem"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 64
+                color: sensor.containsMouse || RootStore.showFollowingAddresses ? Theme.palette.baseColor3 : "transparent"
+
+                contentItem: StatusFlatButton {
+                    objectName: "followingAddressesBtn"
+                    highlighted: RootStore.showFollowingAddresses
+                    hoverColor: Theme.palette.backgroundHover
+                    asset.bgColor: Theme.palette.primaryColor3
+                    text: qsTr("EFP onchain friends")
+                    icon.name: "contact"
+                    icon.width: 40
+                    icon.height: 40
+                    icon.color: Theme.palette.primaryColor1
+                    isRoundIcon: true
+                    textColor: Theme.palette.directColor1
+                    textFillWidth: true
+                    spacing: walletAccountsListView.firstItem.statusListItemTitleArea.anchors.leftMargin
+                    onClicked: root.selectFollowingAddresses()
                 }
 
                 StatusMouseArea {
