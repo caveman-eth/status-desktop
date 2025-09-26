@@ -74,7 +74,7 @@ QtObject:
       let parsedJson = response.parseJson
       var errorString: string
       var userAddress: string
-      var followingAddressesJson: JsonNode
+      var followingAddressesJson, followingResult: JsonNode
       discard parsedJson.getProp("followingAddresses", followingAddressesJson)
       discard parsedJson.getProp("userAddress", userAddress)
       discard parsedJson.getProp("error", errorString)
@@ -84,7 +84,11 @@ QtObject:
       if followingAddressesJson.isNil or followingAddressesJson.kind == JNull:
         return
 
-      let addresses = followingAddressesJson.result.getElems().map(x => x.toFollowingAddressDto())
+      discard followingAddressesJson.getProp("result", followingResult)
+      if followingResult.isNil or followingResult.kind == JNull:
+        return
+
+      let addresses = followingResult.getElems().map(proc(x: JsonNode): FollowingAddressDto = x.toFollowingAddressDto())
       
       # Update cache
       self.followingAddressesTable[userAddress] = addresses

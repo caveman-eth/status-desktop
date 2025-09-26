@@ -67,7 +67,7 @@ QtObject:
     of ModelRole.EnsName:
       result = newQVariant(item.getEnsName())
     of ModelRole.Tags:
-      result = newQVariant(item.getTags())
+      result = newQVariant(item.getTags().join(","))
     of ModelRole.Name:
       result = newQVariant(item.getName())
 

@@ -11,7 +11,16 @@ type
 proc toFollowingAddressDto*(jsonObj: JsonNode): FollowingAddressDto =
   result = FollowingAddressDto()
   discard jsonObj.getProp("address", result.address)
-  discard jsonObj.getProp("tags", result.tags)
+  
+  # Handle tags array manually since getProp doesn't support seq[string]
+  if jsonObj.hasKey("tags") and jsonObj["tags"].kind == JArray:
+    result.tags = @[]
+    for tag in jsonObj["tags"]:
+      if tag.kind == JString:
+        result.tags.add(tag.getStr())
+  else:
+    result.tags = @[]
+    
   # ensName will be set separately via ENS resolution
   result.ensName = ""
 
