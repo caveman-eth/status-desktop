@@ -16,8 +16,9 @@ QtObject {
     id: root
 
     property bool showSavedAddresses: false
+    property bool showFollowingAddresses: false
     property string selectedAddress: ""
-    readonly property bool showAllAccounts: !root.showSavedAddresses && !root.selectedAddress
+    readonly property bool showAllAccounts: !root.showSavedAddresses && !root.showFollowingAddresses && !root.selectedAddress
 
     property var lastCreatedSavedAddress
     property bool addingSavedAddress: false
@@ -62,6 +63,9 @@ QtObject {
             }
         ]
     }
+
+    readonly property alias followingAddresses: walletSectionFollowingAddresses.model
+    property bool loadingFollowingAddresses: false
 
     property var nonWatchAccounts: SortFilterProxyModel {
         sourceModel: accounts
@@ -205,6 +209,10 @@ QtObject {
 
     function setFilterAllAddresses() {
         walletSectionInst.setFilterAllAddresses()
+    }
+
+    function fetchFollowingAddresses(userAddress) {
+        walletSectionFollowingAddresses.fetchFollowingAddresses(userAddress)
     }
 
     function deleteAccount(address, password) {
