@@ -2,9 +2,8 @@
 library 'status-jenkins-lib@v1.9.36'
 
 pipeline {
-
   agent {
-    label getAgentLabel()
+    label 'windows && x86_64 && qt-6.9.2 && windows-e2e-benchmark'
   }
 
   parameters {
@@ -16,7 +15,7 @@ pipeline {
     string(
       name: 'BUILD_SOURCE',
       description: 'URL to tar.gz file OR path to Jenkins build.',
-      defaultValue: getDefaultBuildSource()
+      defaultValue: 'status-app/systems/windows/x86_64/package'
     )
     string(
       name: 'TEST_NAME',
@@ -26,7 +25,7 @@ pipeline {
     string(
       name: 'TEST_SCOPE_FLAG',
       description: 'Paste a known mark to run tests labeled with this mark',
-      defaultValue: getDefaultTestScopeFlag()
+      defaultValue: ''
     )
     string(
       name: 'TESTRAIL_RUN_NAME',
@@ -38,30 +37,20 @@ pipeline {
       description: 'Log level for pytest.',
       choices: ['INFO', 'DEBUG', 'TRACE', 'WARNING', 'CRITICAL']
     )
-    choice(
-      name: 'AGENT_NODE',
-      description: 'Which Windows host to run on (leave default for random selection)',
-      choices: [
-        '',
-        'windows-01-vm',
-        'windows-02-vm',
-        'windows-03-vm',
-        'windows-04-vm'
-      ],
-    )
   }
 
   options {
     timestamps()
     /* Prevent Jenkins jobs from running forever */
     timeout(time: 120, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    disableRestartFromStage()
     /* manage how many builds we keep */
     buildDiscarder(logRotator(
-      daysToKeepStr: '60',
-      numToKeepStr: '50',
-      artifactNumToKeepStr: '50',
+      numToKeepStr: '10',
+      daysToKeepStr: '30',
+      artifactNumToKeepStr: '1',
     ))
-    disableRestartFromStage()
   }
 
   environment {
@@ -83,18 +72,12 @@ pipeline {
 
     TESTRAIL_URL = 'https://ethstatus.testrail.net'
     TESTRAIL_PROJECT_ID = 18
-    /* Override QT xcb plugin with linux to avoid errors like:
-     * "Could not load the Qt platform plugin "xcb" in "" even though it was found."
-    QT_QPA_PLATFORM = "linuxfb"*/
 
     /* Runtime flag to make testing of the app easier.  Switched off: unpredictable app behavior under new tests */
     STATUS_RUNTIME_TEST_MODE = 1
 
-    /* Logging rules let you enable or disable logging for categories */
-    /* QT_LOGGING_RULES = '*.warning=true' */
-
-    /* Set to a non-zero value to make Qt print out diagnostic information about the each (C++) plugin it tries to load. */
-    /* QT_DEBUG_PLUGINS = 0 */
+    /*To enable Home tab */
+    FLAG_HOMEPAGE_ENABLED = 1
 
     /* Hack fix for params not being set in job on first run */
     BUILD_SOURCE =      "${params.BUILD_SOURCE}"
@@ -107,17 +90,12 @@ pipeline {
     QSG_RHI_BACKEND = 'opengl'
   }
 
+
   stages {
     stage('Cleanup Workspace') {
       steps {
         sh './scripts/clean-git.sh'
       }
-    }
-    stage('Prep') {
-      steps { script {
-        setNewBuildName()
-        updateGitHubStatus()
-      } }
     }
 
     stage('Deps') {
@@ -140,8 +118,6 @@ pipeline {
             url:            params.BUILD_SOURCE,
             targetFileName: 'StatusIm-Desktop.7z',
             targetLocation: './pkg/',
-            userName:       '',
-            password:       '',
           )
         ])
       } } } }
@@ -170,7 +146,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        timeout(time: getTestStageTimeout()) {
+        timeout(time: 120) {
           dir('test/e2e') {
             /* Lock the agent so we run only one e2e build at a time */
             lock(resource: "e2e-windows-${env.NODE_NAME}", quantity: 1) {
@@ -203,51 +179,53 @@ pipeline {
     }
   }
 
+
   post {
-    always { script { dir('test/e2e') {
-      archiveArtifacts('aut/Status/bin/*.log')
+    always { 
+      script { 
+        dir('test/e2e') {
+          archiveArtifacts('aut/Status/bin/*.log')
 
-      /* Needed to categorize types of errors and add environment section in allure report. */
-      sh 'cp ext/allure_files/categories.json allure-results'
-      sh 'cp ext/allure_files/environment.properties allure-results'
+          sh 'cp ext/allure_files/categories.json allure-results'
+          sh 'cp ext/allure_files/environment.properties allure-results'
 
-      allure([
-        results: [[path: 'allure-results']],
-        reportBuildPolicy: 'ALWAYS',
-        properties: [],
-        jdk: '',
-      ])
-      /* Link for Jenkins Builds GitHub comment. */
-      env.PKG_URL = "${env.BUILD_URL}allure/"
-      updateGitHubStatus()
-    } } }
-    success { script {
-      github.notifyPR(true)
-    } }
-    failure { script {
-      github.notifyPR(false)
-      discord.send(
-        header: '**Desktop E2E test failure!**',
-        cred: 'discord-status-desktop-e2e-webhook',
-      )
-    } }
+          allure([
+            results: [[path: 'allure-results']],
+            reportBuildPolicy: 'ALWAYS',
+            properties: [],
+            jdk: '',
+          ])
+        }
+      }
+      script {
+        withCredentials([sshUserPrivateKey(
+          credentialsId: 'status-app-benchmarks-deploy-key',
+          keyFileVariable: 'SSH_KEY_FILE'
+        )]) {
+          sh '''
+              eval $(ssh-agent -s)
+              ssh-add $SSH_KEY_FILE
+              ./scripts/push_benchmark.sh
+            '''
+        }
+      }
+    }
     cleanup {
       script {
         powershell '''
           if (Test-Path "C:\\Users\\jenkins\\AppData\\Local\\Status") {
             Remove-Item "C:\\Users\\jenkins\\AppData\\Local\\Status" -Recurse -Force -ErrorAction SilentlyContinue
           }
+          # Clean-up registry entries
+          $registryPath = "HKCU:\\Software\\Status\\Status Desktop"
+          if (Test-Path $registryPath) {
+            Remove-Item $registryPath -Recurse -Force -ErrorAction SilentlyContinue
+          }
         '''
       }
       cleanWs(disableDeferredWipeout: true)
+      powershell "Remove-Item -Path '${env.WORKSPACE_TMP}' -Recurse -Force"
     }
-  }
-}
-
-def setNewBuildName() {
-  def prMatch = params.BUILD_SOURCE =~ /PR-(\d+)/
-  if (prMatch) {
-    currentBuild.displayName = "PR${prMatch[0][1]}"
   }
 }
 
@@ -266,43 +244,4 @@ def setBuildDescFromFile(fileNameOrPath) {
     Commit: tokens.commit,
     Version: (tokens.tstamp ?: tokens.version),
   ])
-}
-
-def updateGitHubStatus() {
-  /* For PR builds update check status. */
-  if (params.BUILD_SOURCE ==~ /.*\/PR-[0-9]+\/?$/) {
-    github.statusUpdate(
-      context: 'jenkins/prs/tests/e2e-new.windows',
-      commit: jenkins.getJobCommitByPath(params.BUILD_SOURCE),
-      repo_url: 'https://github.com/status-im/status-app'
-    )
-  }
-}
-
-def formatMap(Map data=[:]) {
-  def text = ''
-  data.each { key, val -> text += "<b>${key}</b>: ${val}</a><br>\n" }
-  return text
-}
-
-def getDefaultBuildSource() {
-  return ''
-}
-
-def getDefaultTestScopeFlag() {
-  if (JOB_NAME == "status-app/systems/windows/x86_64/tests-e2e") {
-    return ''
-  } else {
-    return '-m=critical'
-  }
-}
-
-def getTestStageTimeout() { params.TEST_SCOPE_FLAG == '-m=critical' ? 30 : 120 }
-
-def getAgentLabel() {
-  def baseLabel = 'windows && x86_64 && qt-6.9.2 && windows-e2e'
-  if (params.AGENT_NODE && params.AGENT_NODE != '') {
-    return "${baseLabel} && ${params.AGENT_NODE}"
-  }
-  return baseLabel
 }

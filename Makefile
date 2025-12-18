@@ -920,6 +920,8 @@ ifeq ($(PACKAGE_TYPE),aab)
 	$(MAKE) -C mobile aab
 else ifeq ($(PACKAGE_TYPE),apk)
 	$(MAKE) -C mobile apk
+else ifeq ($(PACKAGE_TYPE),apk-aab)
+	$(MAKE) -C mobile apk-aab
 else
 	$(MAKE) -C mobile all
 endif

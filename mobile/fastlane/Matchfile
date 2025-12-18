@@ -12,7 +12,7 @@ app_identifier([
 ])
 
 # App Store Connect API Key
-api_key_path(ENV["ASC_API_KEY_JSON"]) if ENV["ASC_API_KEY_JSON"]
+api_key_path(ENV["APP_STORE_CONNECT_API_KEY_PATH"]) if ENV["APP_STORE_CONNECT_API_KEY_PATH"]
 
 # Keychain configuration
 keychain_name(ENV["KEYCHAIN_NAME"]) if ENV["KEYCHAIN_NAME"]

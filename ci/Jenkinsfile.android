@@ -1,17 +1,18 @@
 #!/usr/bin/env groovy
-library 'status-jenkins-lib@v1.9.33'
+library 'status-jenkins-lib@v1.9.36'
 
 /* Options section can't access functions in objects. */
 def isPRBuild = utils.isPRBuild()
-def isNightlyBuild = utils.isNightlyBuild()
-def isReleaseBranch = (env.CHANGE_BRANCH ?: env.BRANCH_NAME)?.startsWith('release')
+
+/* Object to store public URLs for description. */
+descLinks = [:]
 
 pipeline {
   agent {
     /* Image with Ubuntu 22.04, QT 6.9.2, Android SDK/NDK, Go, and Nim */
     docker {
       label 'linuxcontainer'
-      image 'harbor.status.im/status-im/status-desktop-build:1.0.6-qt6.9.2-android'
+      image 'harbor.status.im/status-im/status-desktop-build:1.0.8-qt6.9.2-android'
       alwaysPull true
       args '--entrypoint="" ' +
            '--volume=/nix:/nix ' +
@@ -30,11 +31,6 @@ pipeline {
       name: 'VERBOSE',
       description: 'Level of verbosity based on nimbus-build-system setup.',
       choices: ['0','1','2','3']
-    )
-    choice(
-      name: 'PACKAGE_TYPE',
-      description: 'Package type to build.',
-      choices: ['auto', 'apk', 'aab']
     )
   }
 
@@ -68,13 +64,25 @@ pipeline {
     QT_VERSION = "6.9.2"
     QT_ANDROID_PATH = "/opt/qt/${env.QT_VERSION}/android_arm64_v8a"
     QMAKE = "/opt/qt/${env.QT_VERSION}/android_arm64_v8a/bin/qmake"
-    /* override package type if set, otherwise auto-select based on branch */
-    PACKAGE_TYPE = "${params.PACKAGE_TYPE != 'auto' ? params.PACKAGE_TYPE : (isReleaseBranch ? 'aab' : 'apk')}"
-    STATUS_ARTIFACT = "pkg/${utils.pkgFilename(ext: env.PACKAGE_TYPE, arch: 'arm64', version: env.VERSION, type: env.APP_TYPE)}"
-    STATUS_BINARY = "${WORKSPACE}/mobile/bin/android/qt6/Status.${env.PACKAGE_TYPE}"
+    STATUS_ARTIFACT = "pkg/${utils.pkgFilename(ext: 'apk', arch: 'arm64', version: env.VERSION, type: env.APP_TYPE)}"
+    STATUS_AAB_ARTIFACT = "pkg/${utils.pkgFilename(ext: 'aab', arch: 'arm64', version: env.VERSION, type: env.APP_TYPE)}"
+    NIM_SDS_SOURCE_DIR = "${env.WORKSPACE_TMP}/nim-sds"
   }
 
   stages {
+
+    stage('Initialize') {
+      steps { script {
+        def gitBranch = env.GIT_BRANCH ?: ''
+        def isRelease = gitBranch.contains('release/')
+        env.IS_RELEASE_BRANCH = isRelease ? 'true' : 'false'
+        env.PACKAGE_TYPE = isRelease ? 'apk-aab' : 'apk'
+        env.BUILD_VARIANT = isRelease ? 'release' : 'pr'
+        env.STATUS_ANDROID_APP_NAME = isRelease ? 'Status' : 'StatusPR'
+        env.STATUS_BINARY = "${env.WORKSPACE}/mobile/bin/android/qt6/${env.STATUS_ANDROID_APP_NAME}.apk"
+        env.STATUS_AAB_BINARY = "${env.WORKSPACE}/mobile/bin/android/qt6/${env.STATUS_ANDROID_APP_NAME}.aab"
+      } }
+    }
 
     stage('Cleanup Workspace') {
       steps {
@@ -89,36 +97,54 @@ pipeline {
     }
 
     stage('Build Android') {
-      steps {
+      steps { 
         script {
-          app.buildSignedAndroid(target='mobile-build PACKAGE_TYPE=' + env.PACKAGE_TYPE, verbose=params.VERBOSE)
-        }
+        app.buildSignedAndroid(target='mobile-build PACKAGE_TYPE=' + env.PACKAGE_TYPE, verbose=params.VERBOSE)
+        } 
       }
     }
 
     stage('Package') {
-      steps {
-        sh 'mkdir -p pkg'
-        sh "cp ${env.STATUS_BINARY} ${env.STATUS_ARTIFACT}"
-        sh "ls -la ${env.STATUS_ARTIFACT}"
+      steps { 
+        script {
+          sh 'mkdir -p pkg'
+          sh "cp -v ${env.STATUS_BINARY} ${env.STATUS_ARTIFACT}"
+          if (env.IS_RELEASE_BRANCH == 'true') {
+            sh "cp -v ${env.STATUS_AAB_BINARY} ${env.STATUS_AAB_ARTIFACT}"
+          }
+        } 
       }
     }
 
     stage('Parallel Upload') {
       parallel {
         stage('Upload') {
-          steps {
+          steps { 
             script {
               env.PKG_URL = s5cmd.upload(env.STATUS_ARTIFACT)
-              jenkins.setBuildDesc([(env.PACKAGE_TYPE.toUpperCase()): env.PKG_URL])
+              descLinks.APK = env.PKG_URL
             }
           }
         }
-        stage('Archive') {
-          steps {
+
+        stage('Upload AAB') {
+          when { expression { env.IS_RELEASE_BRANCH == 'true' } }
+          steps { 
             script {
-              archiveArtifacts env.STATUS_ARTIFACT
-            }
+              env.AAB_URL = s5cmd.upload(env.STATUS_AAB_ARTIFACT)
+              descLinks.AAB = env.AAB_URL
+            } 
+          }
+        }
+      }
+    }
+
+    stage('Archive') {
+      steps { 
+        script {
+          archiveArtifacts env.STATUS_ARTIFACT
+          if (env.IS_RELEASE_BRANCH == 'true') {
+            archiveArtifacts env.STATUS_AAB_ARTIFACT
           }
         }
       }
@@ -126,9 +152,13 @@ pipeline {
   }
 
   post {
-      success { script { github.notifyPR(true) } }
-      failure { script { github.notifyPR(false) } }
-      cleanup { cleanWs(disableDeferredWipeout: true) }
+    always { script { jenkins.setBuildDesc(descLinks) } }
+    success { script { github.notifyPR(true) } }
+    failure { script { github.notifyPR(false) } }
+    cleanup {
+      cleanWs(disableDeferredWipeout: true)
+      dir(env.WORKSPACE_TMP) { deleteDir() }
+    }
   }
 }
 
