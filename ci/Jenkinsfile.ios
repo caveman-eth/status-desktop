@@ -82,6 +82,8 @@ pipeline {
     NIM_SDS_SOURCE_DIR = "${env.WORKSPACE_TMP}/nim-sds"
     /* Build variant: used by mobile/scripts/App.sh and mobile/fastlane/Fastfile */
     BUILD_VARIANT = "${utils.isReleaseBuild() ? 'release' : 'pr'}"
+    /* fix for proxy stage defaulting to test */
+    STATUS_BUILD_PROXY_STAGE_NAME = "${utils.isReleaseBuild() ? 'prod' : 'test'}"
   }
 
   stages {
