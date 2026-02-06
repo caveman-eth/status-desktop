@@ -97,8 +97,8 @@ StatusMenu {
         id: blockchainExplorersMenu
         flatNetworks: root.activeNetworksModel
         onNetworkClicked: (shortname, isTestnet) => {
-            let link = Utils.getUrlForAddressOnNetwork(shortname, isTestnet, d.visibleAddress ? d.visibleAddress : root.ensName);
-            Global.openLinkWithConfirmation(link, StatusQUtils.StringUtils.extractDomainFromLink(link));
+            let link = Utils.getUrlForAddressOnNetwork(shortname, isTestnet, root.address);
+            Global.requestOpenLink(link)
         }
     }
 
