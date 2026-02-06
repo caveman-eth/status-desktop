@@ -13,6 +13,7 @@ import AppLayouts.stores
 import AppLayouts.Wallet.stores as WalletStore
 import AppLayouts.Wallet.controls
 
+import shared.controls
 import shared.views
 import shared.stores as SharedStores
 
@@ -178,36 +179,50 @@ StatusDialog {
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(addressText.height, copyButton.height) + Theme.bigPadding
+                Layout.preferredHeight: addressColumn.height + Theme.bigPadding
 
                 color: StatusColors.transparent
                 radius: Theme.radius
                 border.color: Theme.palette.baseColor2
                 border.width: 1
 
-                StatusBaseText {
-                    id: addressText
+                Column {
+                    id: addressColumn
                     anchors.left: parent.left
                     anchors.right: copyButton.left
                     anchors.rightMargin: Theme.padding
                     anchors.leftMargin: Theme.padding
                     anchors.verticalCenter: parent.verticalCenter
-                    text: !!d.ens ? d.ens : d.address
-                    wrapMode: Text.WrapAnywhere
-                    font.pixelSize: Theme.primaryTextFontSize
-                    color: Theme.palette.directColor1
+                    spacing: 2
+
+                    StatusBaseText {
+                        id: ensText
+                        width: parent.width
+                        visible: !!d.ens
+                        text: d.ens
+                        wrapMode: Text.WrapAnywhere
+                        font.pixelSize: Theme.primaryTextFontSize
+                        color: Theme.palette.directColor1
+                    }
+
+                    StatusBaseText {
+                        id: addressText
+                        width: parent.width
+                        text: d.address
+                        wrapMode: Text.WrapAnywhere
+                        font.pixelSize: !!d.ens ? Theme.additionalTextSize : Theme.primaryTextFontSize
+                        color: !!d.ens ? Theme.palette.baseColor1 : Theme.palette.directColor1
+                    }
                 }
 
-                StatusRoundButton {
+                CopyButtonWithCircle {
                     id: copyButton
                     width: 24
                     height: 24
                     anchors.right: parent.right
                     anchors.rightMargin: Theme.padding
-                    anchors.top: addressText.top
-                    icon.name: "copy"
-                    type: StatusRoundButton.Type.Tertiary
-                    onClicked: ClipboardUtils.setText(d.visibleAddress)
+                    anchors.verticalCenter: addressColumn.verticalCenter
+                    textToCopy: d.address
                 }
             }
 

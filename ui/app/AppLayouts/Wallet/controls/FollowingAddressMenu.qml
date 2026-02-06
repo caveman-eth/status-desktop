@@ -59,7 +59,7 @@ StatusMenu {
         icon.name: "copy"
         timeout: 1500
         autoDismissMenu: true
-        onTriggered: ClipboardUtils.setText(d.visibleAddress)
+        onTriggered: ClipboardUtils.setText(root.address)
     }
 
     StatusAction {
