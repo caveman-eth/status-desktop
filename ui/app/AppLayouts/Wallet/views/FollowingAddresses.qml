@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import StatusQ.Components
 import StatusQ.Core
 import StatusQ.Core.Theme
+import StatusQ.Controls
 import StatusQ.Controls.Validators
 
 import SortFilterProxyModel
@@ -137,25 +138,11 @@ Item {
         }
 
         ShapeRectangle {
-            id: noFollowingAddresses
-            Layout.fillWidth: true
-            Layout.preferredHeight: 44
-            visible: root.followingAddressesModel && root.followingAddressesModel.count === 0 && !d.isPaginationLoading
-            text: qsTr("Your EFP onchain friends will appear here")
-        }
-
-        ShapeRectangle {
             id: emptySearchResult
             Layout.fillWidth: true
             Layout.preferredHeight: 44
             visible: root.followingAddressesModel && root.followingAddressesModel.count > 0 && listView.count === 0 && !d.isPaginationLoading
             text: qsTr("No following addresses found. Check spelling or whether the address is correct.")
-        }
-
-        Item {
-            visible: noFollowingAddresses.visible || emptySearchResult.visible
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
 
         Item {
@@ -216,5 +203,19 @@ Item {
             activeNetworksModel: root.networksStore.activeNetworks
             rootStore: root.rootStore
         }
+    }
+
+    StatusLinkText {
+        id: noFollowingAddresses
+        anchors.centerIn: parent
+        width: parent.width - 2 * Theme.bigPadding
+        visible: root.followingAddressesModel && root.followingAddressesModel.count === 0 && !d.isPaginationLoading
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
+        maximumLineCount: 3
+        font.pixelSize: Theme.primaryTextFontSize
+        normalColor: Theme.palette.primaryColor1
+        text: qsTr("No onchain friends found. Find and follow Ethereum accounts on Ethereum Follow Protocol to see them here.")
+        onClicked: Global.requestOpenLink("https://efp.app")
     }
 }
