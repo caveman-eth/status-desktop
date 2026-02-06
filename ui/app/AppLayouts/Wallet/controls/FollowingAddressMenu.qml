@@ -31,11 +31,6 @@ StatusMenu {
     // Expected roles: chainId (int), chainName (string), iconUrl (string), layer (int)
     property var activeNetworksModel
 
-    QtObject {
-        id: d
-        readonly property string visibleAddress: !!root.ensName ? root.ensName : root.address
-    }
-
     function openMenu(parent, x, y, model) {
         root.name = model.name;
         root.address = model.address;
