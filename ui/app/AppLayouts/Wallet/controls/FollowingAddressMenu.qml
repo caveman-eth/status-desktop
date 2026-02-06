@@ -73,7 +73,8 @@ StatusMenu {
                                        switchingAccounsEnabled: false,
                                        hasFloatingButtons: false,
                                        name: root.name,
-                                       address: root.address
+                                       address: root.address,
+                                       mixedcaseAddress: root.address
                                    })
         }
     }

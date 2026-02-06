@@ -187,6 +187,7 @@ Item {
                         Global.openSavedAddressActivityPopup({
                             name: model.name,
                             address: model.address,
+                            mixedcaseAddress: model.address,
                             ens: model.ensName,
                             colorId: "",
                             avatar: model.avatar,
