@@ -25,13 +25,25 @@ StatusDialog {
 
     signal removeSavedAddress(string address)
 
+    function initWithParams(params = {}) {
+        root.name = params.name ?? ""
+        root.address = params.address ?? ""
+        root.ens = params.ens ?? ""
+        root.colorId = params.colorId ?? "blue"
+
+        // Set height imperatively before popup opens to prevent visual jump
+        root.implicitHeight = d.popupHeight
+    }
+
     width: 521
+    implicitHeight: d.popupHeight
     focus: visible
     padding: Theme.padding
 
     QtObject {
         id: d
 
+        readonly property int popupHeight: 220
         readonly property real lineHeight: 1.2
 
         function confirm() {
