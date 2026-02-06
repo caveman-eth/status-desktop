@@ -72,7 +72,7 @@ QtObject {
         if (!walletSectionFollowingAddresses) return
         const primaryAddress = getPrimaryAccountAddress()
         if (primaryAddress) {
-            search = search || ""
+            search = (search || "").toLowerCase()
             limit = limit || 10
             offset = offset || 0
             walletSectionFollowingAddresses.fetchFollowingAddresses(primaryAddress, search, limit, offset)
