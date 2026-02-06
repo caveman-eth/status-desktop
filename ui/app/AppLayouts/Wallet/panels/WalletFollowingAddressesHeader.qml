@@ -46,7 +46,7 @@ Control {
 
         Layout.preferredHeight: 38
 
-        text: qsTr("Add via EFP")
+        text: qsTr("Find a friend")
         size: StatusBaseButton.Size.Small
         normalColor: Theme.palette.primaryColor3
         hoverColor: Theme.palette.primaryColor2
@@ -71,7 +71,7 @@ Control {
             font.pixelSize: Theme.fontSize(19)
             font.weight: Font.Medium
 
-            text: qsTr("EFP onchain friends")
+            text: qsTr("Onchain friends")
             lineHeightMode: Text.FixedHeight
             lineHeight: 26
         }
