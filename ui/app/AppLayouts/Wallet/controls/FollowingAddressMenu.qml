@@ -79,18 +79,6 @@ StatusMenu {
         }
     }
 
-    StatusAction {
-        text: qsTr("View activity")
-        objectName: "viewActivityFollowingAddressAction"
-        assetSettings.name: "wallet"
-        onTriggered: {
-            Global.changeAppSectionBySectionType(Constants.appSection.wallet,
-                                                 WalletLayout.LeftPanelSelection.AllAddresses,
-                                                 WalletLayout.RightPanelSelection.Activity,
-                                                 {savedAddress: root.address})
-        }
-    }
-
     StatusMenuSeparator {}
 
     BlockchainExplorersMenu {

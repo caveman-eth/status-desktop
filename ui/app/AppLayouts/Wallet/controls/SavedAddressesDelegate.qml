@@ -206,21 +206,6 @@ StatusListItem {
             }
         }
 
-        StatusAction {
-            text: qsTr("View activity")
-            objectName: "viewActivitySavedAddressAction"
-            assetSettings.name: "wallet"
-            onTriggered: {
-                if (root.usage === SavedAddressesDelegate.Usage.Item) {
-                    root.aboutToOpenPopup()
-                }
-                Global.changeAppSectionBySectionType(Constants.appSection.wallet,
-                                                     WalletLayout.LeftPanelSelection.AllAddresses,
-                                                     WalletLayout.RightPanelSelection.Activity,
-                                                     {savedAddress: menu.address})
-            }
-        }
-
         StatusMenuSeparator {}
 
         BlockchainExplorersMenu {
