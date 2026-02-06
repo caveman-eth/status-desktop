@@ -28,8 +28,11 @@ Item {
     required property int totalFollowingCount
     required property WalletStores.RootStore rootStore  // Wallet-specific RootStore for delegates
 
+    /* The wallet account address to fetch followings for */
+    property string selectedAddress
+
     signal sendToAddressRequested(string address)
-    signal refreshRequested(string search, int limit, int offset)
+    signal refreshRequested(string address, string search, int limit, int offset)
     signal followingAddressesUpdated()
 
     readonly property bool showPagination: !d.currentSearch && root.totalFollowingCount > d.pageSize
@@ -42,8 +45,8 @@ Item {
         d.goToPage(pageNumber)
     }
 
-    function refresh() {
-        d.refresh()
+    function refresh(address) {
+        d.refresh(address || root.selectedAddress)
     }
 
     QtObject {
@@ -63,7 +66,7 @@ Item {
         function performSearch() {
             const offset = (currentPage - 1) * pageSize
             isPaginationLoading = true
-            root.refreshRequested(currentSearch, pageSize, offset)
+            root.refreshRequested(root.selectedAddress, currentSearch, pageSize, offset)
         }
 
         function goToPage(pageNumber) {
@@ -71,12 +74,12 @@ Item {
             performSearch()
         }
 
-        function refresh() {
+        function refresh(address) {
             currentPage = 1
             currentSearch = ""
             searchBox.text = ""
             isPaginationLoading = true
-            root.refreshRequested("", pageSize, 0)
+            root.refreshRequested(address, "", pageSize, 0)
         }
     }
 
@@ -209,7 +212,7 @@ Item {
         id: noFollowingAddresses
         anchors.centerIn: parent
         width: parent.width - 2 * Theme.bigPadding
-        visible: root.followingAddressesModel && root.followingAddressesModel.count === 0 && !d.isPaginationLoading
+        visible: root.totalFollowingCount === 0 && !d.isPaginationLoading
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         maximumLineCount: 3
