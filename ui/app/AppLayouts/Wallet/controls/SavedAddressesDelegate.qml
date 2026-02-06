@@ -212,6 +212,9 @@ StatusListItem {
             id: blockchainExplorersMenu
             flatNetworks: root.activeNetworks
             onNetworkClicked: {
+                if (root.usage === SavedAddressesDelegate.Usage.Item) {
+                    root.aboutToOpenPopup()
+                }
                 let link = Utils.getUrlForAddressOnNetwork(shortname, isTestnet, d.visibleAddress ? d.visibleAddress : root.ens);
                 Global.requestOpenLink(link)
             }
