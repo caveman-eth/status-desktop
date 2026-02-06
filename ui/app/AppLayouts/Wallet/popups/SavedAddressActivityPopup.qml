@@ -34,8 +34,10 @@ StatusDialog {
 
     onClosed: {
         root.close()
-        walletSection.activityController.setFilterToAddresses(JSON.stringify([]))
-        walletSection.activityController.updateFilter()
+        if (!d.isFollowingAddress) {
+            walletSection.activityController.setFilterToAddresses(JSON.stringify([]))
+            walletSection.activityController.updateFilter()
+        }
     }
 
     function initWithParams(params = {}) {
@@ -47,8 +49,13 @@ StatusDialog {
         d.avatar = params.avatar?? ""
         d.isFollowingAddress = params.isFollowingAddress?? false
 
-        walletSection.activityController.setFilterToAddresses(JSON.stringify([d.address]))
-        walletSection.activityController.updateFilter()
+        if (d.isFollowingAddress)
+            root.implicitHeight = d.followingPopupHeight
+
+        if (!d.isFollowingAddress) {
+            walletSection.activityController.setFilterToAddresses(JSON.stringify([d.address]))
+            walletSection.activityController.updateFilter()
+        }
     }
 
     QtObject {
@@ -56,6 +63,7 @@ StatusDialog {
 
         readonly property int popupWidth: 477
         readonly property int popupHeight: 672
+        readonly property int followingPopupHeight: 250
 
         property string name: ""
         property string address: Constants.zeroAddress
@@ -222,6 +230,8 @@ StatusDialog {
 
             Layout.fillWidth: true
 
+            visible: !d.isFollowingAddress
+
             disableShadowOnScroll: true
             hideVerticalScrollbar: true
             displayValues: false
@@ -232,6 +242,11 @@ StatusDialog {
                        })
             activityStore: WalletStore.RootStore
             networksStore: root.networksStore
+        }
+
+        Item {
+            Layout.fillHeight: true
+            visible: d.isFollowingAddress
         }
     }
 }
